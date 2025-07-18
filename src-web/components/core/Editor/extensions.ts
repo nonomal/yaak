@@ -27,6 +27,7 @@ import {
   crosshairCursor,
   drawSelection,
   dropCursor,
+  EditorView,
   highlightActiveLineGutter,
   highlightSpecialChars,
   keymap,
@@ -36,8 +37,11 @@ import {
 import { tags as t } from '@lezer/highlight';
 import type { EnvironmentVariable } from '@yaakapp-internal/models';
 import { graphql } from 'cm6-graphql';
-import { EditorView } from 'codemirror';
+import { activeRequestIdAtom } from '../../../hooks/useActiveRequestId';
+import { jotaiStore } from '../../../lib/jotai';
+import { renderMarkdown } from '../../../lib/markdown';
 import { pluralizeCount } from '../../../lib/pluralize';
+import { showGraphQLDocExplorerAtom } from '../../graphql/graphqlAtoms';
 import type { EditorProps } from './Editor';
 import { pairs } from './pairs/extension';
 import { text } from './text/extension';
@@ -75,16 +79,20 @@ const syntaxTheme = EditorView.theme({}, { dark: true });
 
 const closeBracketsExtensions: Extension = [closeBrackets(), keymap.of([...closeBracketsKeymap])];
 
-const syntaxExtensions: Record<NonNullable<EditorProps['language']>, LanguageSupport | null> = {
+const syntaxExtensions: Record<
+  NonNullable<EditorProps['language']>,
+  null | (() => LanguageSupport)
+> = {
   graphql: null,
-  json: json(),
-  javascript: javascript(),
-  html: xml(), // HTML as XML because HTML is oddly slow
-  xml: xml(),
-  url: url(),
-  pairs: pairs(),
-  text: text(),
-  markdown: markdown(),
+  json: json,
+  javascript: javascript,
+  // HTML as XML because HTML is oddly slow
+  html: xml,
+  xml: xml,
+  url: url,
+  pairs: pairs,
+  text: text,
+  markdown: markdown,
 };
 
 const closeBracketsFor: (keyof typeof syntaxExtensions)[] = ['json', 'javascript', 'graphql'];
@@ -119,10 +127,30 @@ export function getLanguageExtension({
 
   // GraphQL is a special exception
   if (language === 'graphql') {
-    return [graphql(), extraExtensions];
+    return [
+      graphql(undefined, {
+        async onCompletionInfoRender(gqlCompletionItem): Promise<Node | null> {
+          if (!gqlCompletionItem.documentation) return null;
+          const innerHTML = await renderMarkdown(gqlCompletionItem.documentation);
+          const span = document.createElement('span');
+          span.innerHTML = innerHTML;
+          return span;
+        },
+        onShowInDocs(field, type, parentType) {
+          const activeRequestId = jotaiStore.get(activeRequestIdAtom);
+          if (activeRequestId == null) return;
+          jotaiStore.set(showGraphQLDocExplorerAtom, (v) => ({
+            ...v,
+            [activeRequestId]: { field, type, parentType },
+          }));
+        },
+      }),
+      extraExtensions,
+    ];
   }
 
-  const base = syntaxExtensions[language ?? 'text'] ?? text();
+  const base_ = syntaxExtensions[language ?? 'text'] ?? text();
+  const base = typeof base_ === 'function' ? base_() : text();
 
   if (!useTemplating) {
     return [base, extraExtensions];
@@ -224,7 +252,6 @@ export const multiLineExtensions = ({ hideGutter }: { hideGutter?: boolean }) =>
       }
     },
   }),
-  EditorState.allowMultipleSelections.of(true),
   indentOnInput(),
   rectangularSelection(),
   crosshairCursor(),

@@ -13,10 +13,10 @@ export function Banner({ children, className, color }: BannerProps) {
       <div
         className={classNames(
           className,
+          color && 'bg-surface',
           `x-theme-banner--${color}`,
-          'whitespace-pre-wrap',
-          'border border-border bg-surface',
-          'px-4 py-3 rounded-lg select-auto',
+          'border border-border border-dashed',
+          'px-4 py-2 rounded-lg select-auto',
           'overflow-auto text-text',
         )}
       >

@@ -31,9 +31,9 @@ export function ResizeHandle({
       onDoubleClick={onReset}
       className={classNames(
         className,
-        'group z-10 flex select-none',
-        // 'bg-fg-info', // For debugging
-        vertical ? 'w-full h-3 cursor-row-resize' : 'h-full w-3 cursor-col-resize',
+        'group z-10 flex select-none transition-colors hover:bg-surface-active rounded-full',
+        // 'bg-info', // For debugging
+        vertical ? 'w-full h-2 cursor-row-resize' : 'h-full w-2 cursor-col-resize',
         justify === 'center' && 'justify-center',
         justify === 'end' && 'justify-end',
         justify === 'start' && 'justify-start',

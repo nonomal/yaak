@@ -62,6 +62,7 @@ export type DropdownItemDefault = {
   leftSlot?: ReactNode;
   rightSlot?: ReactNode;
   waitForOnSelect?: boolean;
+  keepOpenOnSelect?: boolean;
   onSelect?: () => void | Promise<void>;
 };
 
@@ -265,7 +266,7 @@ interface MenuProps {
   fullWidth?: boolean;
   isOpen: boolean;
   items: DropdownItem[];
-  triggerRef?: RefObject<HTMLButtonElement>;
+  triggerRef?: RefObject<HTMLButtonElement | null>;
 }
 
 const Menu = forwardRef<Omit<DropdownRef, 'open' | 'isOpen' | 'toggle' | 'items'>, MenuProps>(
@@ -402,7 +403,7 @@ const Menu = forwardRef<Omit<DropdownRef, 'open' | 'isOpen' | 'toggle' | 'items'
           }
         }
 
-        handleClose();
+        if (!item.keepOpenOnSelect) handleClose();
       },
       [handleClose, setSelectedIndex],
     );
@@ -554,7 +555,10 @@ const Menu = forwardRef<Omit<DropdownRef, 'open' | 'isOpen' | 'toggle' | 'items'
                   }
                   if (item.type === 'separator') {
                     return (
-                      <Separator key={i} className={classNames('my-1.5', item.label && 'ml-2')}>
+                      <Separator
+                        key={i}
+                        className={classNames('my-1.5', item.label ? 'ml-2' : null)}
+                      >
                         {item.label}
                       </Separator>
                     );
@@ -642,7 +646,7 @@ function MenuItem({ className, focused, onFocus, item, onSelect, ...props }: Men
       justify="start"
       leftSlot={
         (isLoading || item.leftSlot) && (
-          <div className={classNames('pr-2 flex justify-start opacity-70')}>
+          <div className={classNames('pr-2 flex justify-start [&_svg]:opacity-70')}>
             {isLoading ? <LoadingIcon /> : item.leftSlot}
           </div>
         )

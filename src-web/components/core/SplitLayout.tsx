@@ -8,7 +8,7 @@ import { useContainerSize } from '../../hooks/useContainerQuery';
 import { clamp } from '../../lib/clamp';
 import { ResizeHandle } from '../ResizeHandle';
 
-interface SlotProps {
+export interface SlotProps {
   orientation: 'horizontal' | 'vertical';
   style: CSSProperties;
 }
@@ -25,9 +25,10 @@ interface Props {
   layout?: 'responsive' | 'vertical' | 'horizontal';
 }
 
-const areaL = { gridArea: 'left' };
-const areaR = { gridArea: 'right' };
-const areaD = { gridArea: 'drag' };
+const baseProperties = { minWidth: 0 };
+const areaL = { ...baseProperties, gridArea: 'left' };
+const areaR = { ...baseProperties, gridArea: 'right' };
+const areaD = { ...baseProperties, gridArea: 'drag' };
 
 const STACK_VERTICAL_WIDTH = 500;
 
@@ -63,7 +64,7 @@ export function SplitLayout({
   }
 
   const size = useContainerSize(containerRef);
-  const verticalBasedOnSize = size.width < STACK_VERTICAL_WIDTH;
+  const verticalBasedOnSize = size.width !== 0 && size.width < STACK_VERTICAL_WIDTH;
   const vertical = layout !== 'horizontal' && (layout === 'vertical' || verticalBasedOnSize);
 
   const styles = useMemo<CSSProperties>(() => {
@@ -78,7 +79,7 @@ export function SplitLayout({
           `
         : `
             ' ${areaL.gridArea} ${areaD.gridArea} ${areaR.gridArea}' minmax(0,1fr)
-            / ${1 - width}fr   0                ${width}fr           
+            / ${1 - width}fr    0                 ${width}fr           
           `,
     };
   }, [style, vertical, height, minHeightPx, width]);
@@ -141,27 +142,25 @@ export function SplitLayout({
     [width, height, vertical, minHeightPx, setHeight, minWidthPx, setWidth],
   );
 
-  const containerQueryReady = size.width > 0 || size.height > 0;
-
   return (
-    <div ref={containerRef} style={styles} className={classNames(className, 'grid w-full h-full overflow-hidden')}>
-      {containerQueryReady && (
+    <div
+      ref={containerRef}
+      style={styles}
+      className={classNames(className, 'grid w-full h-full overflow-hidden')}
+    >
+      {firstSlot({ style: areaL, orientation: vertical ? 'vertical' : 'horizontal' })}
+      {secondSlot && (
         <>
-          {firstSlot({ style: areaL, orientation: vertical ? 'vertical' : 'horizontal' })}
-          {secondSlot && (
-            <>
-              <ResizeHandle
-                style={areaD}
-                isResizing={isResizing}
-                className={classNames(vertical ? '-translate-y-1.5' : '-translate-x-1.5')}
-                onResizeStart={handleResizeStart}
-                onReset={handleReset}
-                side={vertical ? 'top' : 'left'}
-                justify="center"
-              />
-              {secondSlot({ style: areaR, orientation: vertical ? 'vertical' : 'horizontal' })}
-            </>
-          )}
+          <ResizeHandle
+            style={areaD}
+            isResizing={isResizing}
+            className={classNames(vertical ? '-translate-y-1' : '-translate-x-1')}
+            onResizeStart={handleResizeStart}
+            onReset={handleReset}
+            side={vertical ? 'top' : 'left'}
+            justify="center"
+          />
+          {secondSlot({ style: areaR, orientation: vertical ? 'vertical' : 'horizontal' })}
         </>
       )}
     </div>
